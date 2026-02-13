@@ -3,13 +3,35 @@ require_once "../config/database.php";
 require_once "../vendor/autoload.php";
 require_once "../middleware/auth.php";
 
-$stmt = $conn->prepare("SELECT id, name, erp_number, email FROM users WHERE id=?");
-$stmt->bind_param("i", $decoded->id);
-$stmt->execute();
-$result = $stmt->get_result();
-$user = $result->fetch_assoc();
+header("Content-Type: application/json");
 
-echo json_encode([
-    "success" => true,
-    "data" => $user
-]);
+try {
+
+    // Fetch user using MeekroDB
+    $user = DB::queryFirstRow(
+        "SELECT id, name, erp_number, email 
+         FROM users 
+         WHERE id = %i",
+        $decoded->id
+    );
+
+    if (!$user) {
+        http_response_code(404);
+        die(json_encode([
+            "success" => false,
+            "error" => "User not found"
+        ]));
+    }
+
+    echo json_encode([
+        "success" => true,
+        "data" => $user
+    ]);
+} catch (Exception $e) {
+
+    http_response_code(500);
+    echo json_encode([
+        "success" => false,
+        "error" => "Server error"
+    ]);
+}

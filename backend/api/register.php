@@ -12,9 +12,16 @@ if (!$data) {
 
 /* Required fields */
 $required = [
-    "name","status","designation","erp_number",
-    "appointment_date","segment","segment_id",
-    "email","phone","password"
+    "name",
+    "status",
+    "designation",
+    "erp_number",
+    "appointment_date",
+    "segment",
+    "segment_id",
+    "email",
+    "phone",
+    "password"
 ];
 
 foreach ($required as $field) {
@@ -57,68 +64,60 @@ $employment_status = 'A';
 $is_permanent = ($status === "Permanent") ? 1 : 0;
 $admin_approved = 1;
 
-/* Check duplicate */
-$check = $conn->prepare("SELECT id FROM users WHERE email = ? OR erp_number = ?");
-$check->bind_param("ss", $email, $erp_number);
-$check->execute();
-$check->store_result();
+try {
 
-if ($check->num_rows > 0) {
-    http_response_code(409);
-    exit(json_encode(["error" => "Email or ERP already exists"]));
-}
+    /* Check duplicate */
+    $existing = DB::queryFirstRow(
+        "SELECT id FROM users WHERE email=%s OR erp_number=%s",
+        $email,
+        $erp_number
+    );
 
-/* Insert */
-$stmt = $conn->prepare("
-INSERT INTO users (
-    name,status,designation,designation_code,erp_number,
-    appointment_date,current_posting,last_posting,
-    line_manager,segment_head,segment,segment_id,
-    shift,current_salary,email,phone,password,
-    emergency_contact,profile_image,
-    role_id,cfo_id,hr_id,attendance_id,
-    accountant_id,admin_id,
-    gender,is_permanent,employment_status,admin_approved
-) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-");
-$stmt->bind_param(
-    "sssssssssssissssssssiiiiiiisi",
-    $name,
-    $status,
-    $designation,
-    $designation_code,
-    $erp_number,
-    $appointment_date,
-    $current_posting,
-    $last_posting,
-    $line_manager,
-    $segment_head,
-    $segment,
-    $segment_id,
-    $shift,
-    $current_salary,
-    $email,
-    $phone,
-    $password,
-    $emergency_contact,
-    $profile_image,
-    $role_id,
-    $cfo_id,
-    $hr_id,
-    $attendance_id,
-    $accountant_id,
-    $admin_id,
-    $gender,
-    $is_permanent,
-    $employment_status,
-    $admin_approved
-);
+    if ($existing) {
+        http_response_code(409);
+        exit(json_encode(["error" => "Email or ERP already exists"]));
+    }
 
+    /* Insert */
+    DB::insert('users', [
+        'name' => $name,
+        'status' => $status,
+        'designation' => $designation,
+        'designation_code' => $designation_code,
+        'erp_number' => $erp_number,
+        'appointment_date' => $appointment_date,
+        'current_posting' => $current_posting,
+        'last_posting' => $last_posting,
+        'line_manager' => $line_manager,
+        'segment_head' => $segment_head,
+        'segment' => $segment,
+        'segment_id' => $segment_id,
+        'shift' => $shift,
+        'current_salary' => $current_salary,
+        'email' => $email,
+        'phone' => $phone,
+        'password' => $password,
+        'emergency_contact' => $emergency_contact,
+        'profile_image' => $profile_image,
+        'role_id' => $role_id,
+        'cfo_id' => $cfo_id,
+        'hr_id' => $hr_id,
+        'attendance_id' => $attendance_id,
+        'accountant_id' => $accountant_id,
+        'admin_id' => $admin_id,
+        'gender' => $gender,
+        'is_permanent' => $is_permanent,
+        'employment_status' => $employment_status,
+        'admin_approved' => $admin_approved
+    ]);
 
+    echo json_encode([
+        "message" => "User registered successfully"
+    ]);
+} catch (Exception $e) {
 
-if ($stmt->execute()) {
-    echo json_encode(["message" => "User registered successfully"]);
-} else {
     http_response_code(500);
-    echo json_encode(["error" => "Registration failed"]);
+    echo json_encode([
+        "error" => "Registration failed"
+    ]);
 }

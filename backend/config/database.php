@@ -1,23 +1,23 @@
 <?php
 require_once __DIR__ . '/../vendor/autoload.php';
+require_once __DIR__ . '/../lib/db.class.php';
 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/../');
+use Dotenv\Dotenv;
+
+// Load .env
+$dotenv = Dotenv::createImmutable(__DIR__ . '/../');
 $dotenv->load();
 
-$conn = new mysqli(
-    $_ENV['DB_HOST'],
-    $_ENV['DB_USER'],
-    $_ENV['DB_PASS'],
-    $_ENV['DB_NAME']
-);
+// Configure MeekroDB
+DB::$host = $_ENV['DB_HOST'];
+DB::$user = $_ENV['DB_USER'];
+DB::$password = $_ENV['DB_PASS'];
+DB::$dbName = $_ENV['DB_NAME'];
+DB::$encoding = 'utf8mb4';
 
-if ($conn->connect_error) {
-    http_response_code(500);
-    die(json_encode(["error" => "Database connection failed"]));
-}
 
-$conn->set_charset("utf8mb4");
+
+// Headers
 header("Content-Type: application/json");
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
-

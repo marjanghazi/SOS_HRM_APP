@@ -19,7 +19,7 @@ if (!$authHeader || !preg_match('/Bearer\s(\S+)/', $authHeader, $matches)) {
 $token = $matches[1];
 
 // 2️⃣ Validate JWT
-$jwt_secret = $_ENV['JWT_SECRET'] ?? 'my_super_strong_jwt_secret_!123';
+$jwt_secret = $_ENV['JWT_SECRET'];
 try {
     $decoded = JWT::decode($token, new Key($jwt_secret, 'HS256'));
 } catch (Exception $e) {

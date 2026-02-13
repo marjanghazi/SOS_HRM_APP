@@ -39,12 +39,14 @@ $erp_number = $decoded->erp_number;
 
 try {
 
-    // 4️⃣ Fetch Leave Ledger for this ERP
+    // 4️⃣ Fetch Leave Ledger with Leave Type name
     $ledger = DB::query(
-        "SELECT id, year, leave_type, total_leaves, availed_leaves, balance
-         FROM leave_ledger
-         WHERE erp_number = %s
-         ORDER BY year DESC",
+        "SELECT ll.id, ll.year, ll.leave_type, ll.total_leaves, ll.availed_leaves, ll.balance,
+                lt.name AS leave_type_name
+         FROM leaves_ledger ll
+         INNER JOIN leave_types lt ON ll.leave_type = lt.id
+         WHERE ll.erp_number = %s
+         ORDER BY ll.year DESC",
         $erp_number
     );
 
@@ -57,13 +59,27 @@ try {
         exit;
     }
 
-    // 5️⃣ Return Response
+    // 5️⃣ Format data to nest leave_type
+    $formatted = [];
+    foreach ($ledger as $row) {
+        $formatted[] = [
+            "id" => $row['id'],
+            "year" => $row['year'],
+            "leave_type" => [
+                "name" => $row['leave_type_name']
+            ],
+            "total_leaves" => $row['total_leaves'],
+            "availed_leaves" => $row['availed_leaves'],
+            "balance" => $row['balance']
+        ];
+    }
+
+    // 6️⃣ Return Response
     echo json_encode([
         "success" => true,
         "message" => "Leave ledger fetched successfully",
-        "data" => $ledger
+        "data" => $formatted
     ]);
-
 } catch (Exception $e) {
 
     http_response_code(500);

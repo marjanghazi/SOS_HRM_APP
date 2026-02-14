@@ -140,7 +140,6 @@ try {
             "status" => "pending"
         ]
     ]);
-
 } catch (Exception $e) {
 
     http_response_code(500);

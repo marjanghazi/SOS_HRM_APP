@@ -119,7 +119,6 @@ try {
         ], "id=%i", $leave_id);
 
         $role = "Manager";
-
     } elseif ($leave['hr_id'] == $user['id']) {
 
         DB::update("apply_leaves", [
@@ -130,7 +129,6 @@ try {
         ], "id=%i", $leave_id);
 
         $role = "HR";
-
     } elseif ($leave['segment_head_id'] == $user['id']) {
 
         DB::update("apply_leaves", [
@@ -141,7 +139,6 @@ try {
         ], "id=%i", $leave_id);
 
         $role = "Segment Head";
-
     } elseif ($leave['attendance_id'] == $user['id']) {
 
         DB::update("apply_leaves", [
@@ -152,7 +149,6 @@ try {
         ], "id=%i", $leave_id);
 
         $role = "Attendance";
-
     } else {
 
         http_response_code(403);
@@ -173,7 +169,6 @@ try {
         "success" => true,
         "message" => "$role has $action the leave successfully"
     ]);
-
 } catch (Exception $e) {
 
     http_response_code(500);

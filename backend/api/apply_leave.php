@@ -34,7 +34,6 @@ try {
     ]));
 }
 
-// 3️⃣ Extract ERP from token
 $erp_number = $decoded->erp_number ?? null;
 
 if (!$erp_number) {
@@ -45,7 +44,7 @@ if (!$erp_number) {
     ]));
 }
 
-// 4️⃣ Verify ERP exists in users table (FK logic)
+// 3️⃣ Check user exists
 $userExists = DB::queryFirstField(
     "SELECT erp_number FROM users WHERE erp_number = %s",
     $erp_number
@@ -59,7 +58,7 @@ if (!$userExists) {
     ]));
 }
 
-// 5️⃣ Only POST allowed
+// 4️⃣ Only POST allowed
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
     die(json_encode([
@@ -68,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     ]));
 }
 
-// 6️⃣ Get JSON body
+// 5️⃣ Get JSON body
 $data = json_decode(file_get_contents("php://input"), true);
 
 if (!$data) {
@@ -79,7 +78,7 @@ if (!$data) {
     ]));
 }
 
-// 7️⃣ Required fields
+// 6️⃣ Required fields
 $requiredFields = [
     "manager_id",
     "hr_id",
@@ -106,7 +105,72 @@ foreach ($requiredFields as $field) {
 
 try {
 
-    // 8️⃣ Insert into apply_leaves
+    // 7️⃣ Get Leave Type ID
+    $leaveType = DB::queryFirstRow(
+        "SELECT id FROM leave_types WHERE name = %s AND status = 1",
+        $data["leave_type"]
+    );
+
+    if (!$leaveType) {
+        http_response_code(400);
+        die(json_encode([
+            "success" => false,
+            "error" => "Invalid leave type"
+        ]));
+    }
+
+    $leave_type_id = $leaveType['id'];
+
+    // 8️⃣ Calculate requested leave days
+    $start = new DateTime($data["start_date"]);
+    $end   = new DateTime($data["end_date"]);
+
+    if ($start > $end) {
+        http_response_code(400);
+        die(json_encode([
+            "success" => false,
+            "error" => "Start date cannot be after end date"
+        ]));
+    }
+
+    $interval = $start->diff($end);
+    $days = $interval->days + 1; // inclusive
+
+    // If Half Day
+    if (strtolower($data["leave_nature"]) === "half day") {
+        $days = 0.5;
+    }
+
+    $currentYear = date("Y");
+
+    // 9️⃣ Get Leave Balance
+    $ledger = DB::queryFirstRow(
+        "SELECT balance FROM leaves_ledger 
+         WHERE erp_number = %s AND leave_type = %i AND year = %i",
+        $erp_number,
+        $leave_type_id,
+        $currentYear
+    );
+
+    if (!$ledger) {
+        http_response_code(400);
+        die(json_encode([
+            "success" => false,
+            "error" => "Leave ledger not found for this leave type"
+        ]));
+    }
+
+    if ($ledger['balance'] < $days) {
+        http_response_code(400);
+        die(json_encode([
+            "success" => false,
+            "error" => "Insufficient leave balance",
+            "available_balance" => $ledger['balance'],
+            "requested_days" => $days
+        ]));
+    }
+
+    // 🔟 Insert into apply_leaves
     DB::insert("apply_leaves", [
         "erp_number" => $erp_number,
         "manager_id" => $data["manager_id"],
@@ -137,7 +201,8 @@ try {
         "data" => [
             "leave_id" => $leave_id,
             "erp_number" => $erp_number,
-            "status" => "pending"
+            "requested_days" => $days,
+            "remaining_balance" => $ledger['balance'] - $days
         ]
     ]);
 } catch (Exception $e) {

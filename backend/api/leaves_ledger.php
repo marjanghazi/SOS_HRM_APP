@@ -66,7 +66,8 @@ try {
             "id" => $row['id'],
             "year" => $row['year'],
             "leave_type" => [
-                "name" => $row['leave_type_name']
+                "name" => $row['leave_type_name'],
+                "id" => $row['leave_type']
             ],
             "total_leaves" => $row['total_leaves'],
             "availed_leaves" => $row['availed_leaves'],

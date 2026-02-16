@@ -135,11 +135,11 @@ try {
     // 🔟 Insert into apply_leaves
     DB::insert("apply_leaves", [
         "erp_number" => $erp_number,
-        "manager_id" => $data["manager_id"] ?? null,
-        "hr_id" => $data["hr_id"] ?? null,
-        "segment_head_id" => $data["segment_head_id"] ?? null,
-        "attendance_id" => $data["attendance_id"] ?? null,
-        "leave_type" => $data["leave_type"] ?? null,
+        "manager_id" => isset($data["manager_id"]) ? (int)$data["manager_id"] : null,
+        "hr_id" => isset($data["hr_id"]) ? (int)$data["hr_id"] : null,
+        "segment_head_id" => isset($data["segment_head_id"]) ? (int)$data["segment_head_id"] : null,
+        "attendance_id" => isset($data["attendance_id"]) ? (int)$data["attendance_id"] : null,
+        "leave_type" => isset($leave_type_id) ? (int)$leave_type_id : null,
         "leave_nature" => $data["leave_nature"] ?? null,
         "start_date" => $data["start_date"] ?? null,
         "end_date" => $data["end_date"] ?? null,
@@ -154,7 +154,6 @@ try {
         "segment_head_status" => "pending",
         "attendance_status" => "pending"
     ]);
-
     $leave_id = DB::insertId();
 
     echo json_encode([

@@ -78,54 +78,21 @@ if (!$data) {
     ]));
 }
 
-// 6️⃣ Required fields
-$requiredFields = [
-    "manager_id",
-    "hr_id",
-    "segment_head_id",
-    "attendance_id",
-    "leave_type",
-    "leave_nature",
-    "start_date",
-    "end_date",
-    "start_time",
-    "end_time",
-    "reason"
-];
-
-foreach ($requiredFields as $field) {
-    if (!isset($data[$field]) || $data[$field] === "") {
-        http_response_code(400);
-        die(json_encode([
-            "success" => false,
-            "error" => "$field is required"
-        ]));
-    }
-}
-
 try {
 
     // 7️⃣ Get Leave Type ID
     $leaveType = DB::queryFirstRow(
         "SELECT id FROM leave_types WHERE name = %s AND status = 1",
-        $data["leave_type"]
+        $data["leave_type"] ?? null
     );
 
-    if (!$leaveType) {
-        http_response_code(400);
-        die(json_encode([
-            "success" => false,
-            "error" => "Invalid leave type"
-        ]));
-    }
-
-    $leave_type_id = $leaveType['id'];
+    $leave_type_id = $leaveType['id'] ?? null;
 
     // 8️⃣ Calculate requested leave days
-    $start = new DateTime($data["start_date"]);
-    $end   = new DateTime($data["end_date"]);
+    $start = isset($data["start_date"]) ? new DateTime($data["start_date"]) : null;
+    $end   = isset($data["end_date"]) ? new DateTime($data["end_date"]) : null;
 
-    if ($start > $end) {
+    if ($start && $end && $start > $end) {
         http_response_code(400);
         die(json_encode([
             "success" => false,
@@ -133,34 +100,29 @@ try {
         ]));
     }
 
-    $interval = $start->diff($end);
-    $days = $interval->days + 1; // inclusive
+    $days = 0;
+    if ($start && $end) {
+        $interval = $start->diff($end);
+        $days = $interval->days + 1; // inclusive
+    }
 
     // If Half Day
-    if (strtolower($data["leave_nature"]) === "half day") {
+    if (isset($data["leave_nature"]) && strtolower($data["leave_nature"]) === "half day") {
         $days = 0.5;
     }
 
     $currentYear = date("Y");
 
     // 9️⃣ Get Leave Balance
-    $ledger = DB::queryFirstRow(
+    $ledger = $leave_type_id ? DB::queryFirstRow(
         "SELECT balance FROM leaves_ledger 
          WHERE erp_number = %s AND leave_type = %i AND year = %i",
         $erp_number,
         $leave_type_id,
         $currentYear
-    );
+    ) : null;
 
-    if (!$ledger) {
-        http_response_code(400);
-        die(json_encode([
-            "success" => false,
-            "error" => "Leave ledger not found for this leave type"
-        ]));
-    }
-
-    if ($ledger['balance'] < $days) {
+    if ($ledger && $ledger['balance'] < $days) {
         http_response_code(400);
         die(json_encode([
             "success" => false,
@@ -173,17 +135,17 @@ try {
     // 🔟 Insert into apply_leaves
     DB::insert("apply_leaves", [
         "erp_number" => $erp_number,
-        "manager_id" => $data["manager_id"],
-        "hr_id" => $data["hr_id"],
-        "segment_head_id" => $data["segment_head_id"],
-        "attendance_id" => $data["attendance_id"],
-        "leave_type" => $data["leave_type"],
-        "leave_nature" => $data["leave_nature"],
-        "start_date" => $data["start_date"],
-        "end_date" => $data["end_date"],
-        "start_time" => $data["start_time"],
-        "end_time" => $data["end_time"],
-        "reason" => $data["reason"],
+        "manager_id" => $data["manager_id"] ?? null,
+        "hr_id" => $data["hr_id"] ?? null,
+        "segment_head_id" => $data["segment_head_id"] ?? null,
+        "attendance_id" => $data["attendance_id"] ?? null,
+        "leave_type" => $data["leave_type"] ?? null,
+        "leave_nature" => $data["leave_nature"] ?? null,
+        "start_date" => $data["start_date"] ?? null,
+        "end_date" => $data["end_date"] ?? null,
+        "start_time" => $data["start_time"] ?? null,
+        "end_time" => $data["end_time"] ?? null,
+        "reason" => $data["reason"] ?? null,
         "created_at" => date("Y-m-d H:i:s"),
         "updated_at" => date("Y-m-d H:i:s"),
         "status" => "pending",
@@ -202,7 +164,7 @@ try {
             "leave_id" => $leave_id,
             "erp_number" => $erp_number,
             "requested_days" => $days,
-            "remaining_balance" => $ledger['balance'] - $days
+            // "remaining_balance" => $ledger['balance'] - $days ?? null
         ]
     ]);
 } catch (Exception $e) {

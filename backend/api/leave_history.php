@@ -49,7 +49,7 @@ if (!$erp_number) {
 
 try {
 
-    // 3️⃣ Fetch Leave History
+    // 3️⃣ Fetch all leaves for ERP
     $leaves = DB::query(
         "SELECT 
             id,
@@ -63,11 +63,6 @@ try {
             hr_status,
             segment_head_status,
             attendance_status,
-            status,
-            manager_approval_date,
-            hr_approval_date,
-            segment_head_approval_date,
-            attendance_approval_date,
             created_at
          FROM apply_leaves
          WHERE erp_number = %s
@@ -75,12 +70,72 @@ try {
         $erp_number
     );
 
+    $response = [];
+
+    foreach ($leaves as $leave) {
+
+        // 🔹 Calculate leave days first
+        $start = new DateTime($leave['start_date']);
+        $end   = new DateTime($leave['end_date']);
+        $interval = $start->diff($end);
+        $days = $interval->days + 1;
+
+        if (strtolower($leave['leave_nature']) === "half day") {
+            $days = 0.5;
+        }
+
+        // 🔹 Initialize final_status
+        $final_status = "pending";
+        $approval_fields = [
+            "manager_status" => $leave['manager_status'],
+            "attendance_status" => $leave['attendance_status']
+        ];
+
+        if ($days <= 4) {
+            // Only manager + attendance required
+            $final_status = (strtolower($leave['manager_status']) === "approved" &&
+                strtolower($leave['attendance_status']) === "approved") ?
+                "approved" : (
+                    (strtolower($leave['manager_status']) === "rejected" ||
+                        strtolower($leave['attendance_status']) === "rejected") ?
+                    "rejected" : "pending");
+        } else {
+            // Include HR and Segment Head approvals for leaves > 4
+            $approval_fields['hr_status'] = $leave['hr_status'];
+            $approval_fields['segment_head_status'] = $leave['segment_head_status'];
+
+            $final_status = (strtolower($leave['manager_status']) === "approved" &&
+                strtolower($leave['attendance_status']) === "approved" &&
+                strtolower($leave['hr_status']) === "approved" &&
+                strtolower($leave['segment_head_status']) === "approved") ?
+                "approved" : (
+                    (strtolower($leave['manager_status']) === "rejected" ||
+                        strtolower($leave['attendance_status']) === "rejected" ||
+                        strtolower($leave['hr_status']) === "rejected" ||
+                        strtolower($leave['segment_head_status']) === "rejected") ?
+                    "rejected" : "pending");
+        }
+
+        // 🔹 Build response
+        $response[] = [
+            "id" => $leave['id'],
+            "erp_number" => $leave['erp_number'],
+            "reason" => $leave['reason'],
+            "leave_type" => $leave['leave_type'],
+            "leave_nature" => $leave['leave_nature'],
+            "start_date" => $leave['start_date'],
+            "end_date" => $leave['end_date'],
+            "created_at" => $leave['created_at'],
+            "leave_days" => $days,
+            "final_status" => $final_status
+        ] + $approval_fields; // merge only relevant approval statuses
+    }
+
     echo json_encode([
         "success" => true,
-        "count" => count($leaves),
-        "data" => $leaves
+        "count" => count($response),
+        "data" => $response
     ]);
-
 } catch (Exception $e) {
 
     http_response_code(500);

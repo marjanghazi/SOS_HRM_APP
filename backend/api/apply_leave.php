@@ -44,19 +44,27 @@ if (!$erp_number) {
     ]));
 }
 
-// 3️⃣ Check user exists
-$userExists = DB::queryFirstField(
-    "SELECT erp_number FROM users WHERE erp_number = %s",
+// 3️⃣ Get full user record (including hierarchy)
+$user = DB::queryFirstRow(
+    "SELECT erp_number, line_manager, segment_head, hr_id, attendance_id 
+     FROM users 
+     WHERE erp_number = %s",
     $erp_number
 );
 
-if (!$userExists) {
+if (!$user) {
     http_response_code(404);
     die(json_encode([
         "success" => false,
         "error" => "User not found"
     ]));
 }
+
+// Extract hierarchy from users table
+$manager_id = $user['line_manager'] ?? null;
+$segment_head_id = $user['segment_head'] ?? null;
+$hr_id = $user['hr_id'] ?? null;
+$attendance_id = $user['attendance_id'] ?? null;
 
 // 4️⃣ Only POST allowed
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -103,10 +111,9 @@ try {
     $days = 0;
     if ($start && $end) {
         $interval = $start->diff($end);
-        $days = $interval->days + 1; // inclusive
+        $days = $interval->days + 1;
     }
 
-    // If Half Day
     if (isset($data["leave_nature"]) && strtolower($data["leave_nature"]) === "half day") {
         $days = 0.5;
     }
@@ -132,20 +139,25 @@ try {
         ]));
     }
 
+    // Remove commas from reason
+    $reason = isset($data["reason"])
+        ? trim(preg_replace('/\s+/', ' ', str_replace([",", "'", "،"], "", $data["reason"])))
+        : null;
+
     // 🔟 Insert into apply_leaves
     DB::insert("apply_leaves", [
         "erp_number" => $erp_number,
-        "manager_id" => isset($data["manager_id"]) ? (int)$data["manager_id"] : null,
-        "hr_id" => isset($data["hr_id"]) ? (int)$data["hr_id"] : null,
-        "segment_head_id" => isset($data["segment_head_id"]) ? (int)$data["segment_head_id"] : null,
-        "attendance_id" => isset($data["attendance_id"]) ? (int)$data["attendance_id"] : null,
+        "manager_id" => $manager_id,
+        "hr_id" => $hr_id,
+        "segment_head_id" => $segment_head_id,
+        "attendance_id" => $attendance_id,
         "leave_type" => isset($leave_type_id) ? (int)$leave_type_id : null,
         "leave_nature" => $data["leave_nature"] ?? null,
         "start_date" => $data["start_date"] ?? null,
         "end_date" => $data["end_date"] ?? null,
         "start_time" => $data["start_time"] ?? null,
         "end_time" => $data["end_time"] ?? null,
-        "reason" => $data["reason"] ?? null,
+        "reason" => $reason,
         "created_at" => date("Y-m-d H:i:s"),
         "updated_at" => date("Y-m-d H:i:s"),
         "status" => "pending",
@@ -154,6 +166,7 @@ try {
         "segment_head_status" => "pending",
         "attendance_status" => "pending"
     ]);
+
     $leave_id = DB::insertId();
 
     echo json_encode([
@@ -163,7 +176,13 @@ try {
             "leave_id" => $leave_id,
             "erp_number" => $erp_number,
             "requested_days" => $days,
-            // "remaining_balance" => $ledger['balance'] - $days ?? null
+            "leave_type_id" => $leave_type_id,
+            "leave_nature" => $data["leave_nature"] ?? null,
+            "manager_id" => $manager_id,
+            "hr_id" => $hr_id,
+            "segment_head_id" => $segment_head_id,
+            "attendance_id" => $attendance_id
+
         ]
     ]);
 } catch (Exception $e) {
@@ -171,6 +190,8 @@ try {
     http_response_code(500);
     echo json_encode([
         "success" => false,
-        "error" => "Server error"
+        "error" => $e->getMessage(),
+        "file" => $e->getFile(),
+        "line" => $e->getLine()
     ]);
 }

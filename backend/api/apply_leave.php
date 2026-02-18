@@ -90,7 +90,7 @@ try {
 
     // 7️⃣ Get Leave Type ID
     $leaveType = DB::queryFirstRow(
-        "SELECT id FROM leave_types WHERE name = %s AND status = 1",
+        "SELECT id FROM leave_types WHERE id = %s AND status = 1",
         $data["leave_type"] ?? null
     );
 
@@ -114,7 +114,7 @@ try {
         $days = $interval->days + 1;
     }
 
-    if (isset($data["leave_nature"]) && strtolower($data["leave_nature"]) === "half day") {
+    if (isset($data["leave_nature"]) && strtolower($data["leave_nature"]) === "half") {
         $days = 0.5;
     }
 

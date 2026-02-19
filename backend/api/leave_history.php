@@ -10,6 +10,14 @@ header("Content-Type: application/json");
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
+// ✅ Only allow POST requests
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405); // Method Not Allowed
+    die(json_encode([
+        "success" => false,
+        "error" => "Only POST requests are allowed"
+    ]));
+}
 // 1️⃣ Authorization Header
 $headers = getallheaders();
 $authHeader = $headers['Authorization'] ?? '';

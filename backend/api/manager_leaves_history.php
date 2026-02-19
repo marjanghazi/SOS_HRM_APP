@@ -9,9 +9,9 @@ header("Content-Type: application/json");
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    die(json_encode(["success" => false, "error" => "Only GET requests are allowed"]));
+    die(json_encode(["success" => false, "error" => "Only POST requests are allowed"]));
 }
 
 /* =========================

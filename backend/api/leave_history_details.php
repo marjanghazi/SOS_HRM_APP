@@ -123,7 +123,7 @@ try {
         }
 
         // Helper function
-        $getName = function($erp) use ($users) {
+        $getName = function ($erp) use ($users) {
             if (!$erp) return null;
             return $users[$erp] ?? "ERP number not matched";
         };
@@ -173,7 +173,6 @@ try {
         "count" => count($response),
         "data" => $response
     ]);
-
 } catch (Exception $e) {
 
     http_response_code(500);

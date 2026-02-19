@@ -11,7 +11,7 @@ error_reporting(E_ALL);
 
 // ✅ Only allow POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405); // Method Not Allowed
+    http_response_code(405);
     die(json_encode([
         "success" => false,
         "error" => "Only POST requests are allowed"
@@ -55,29 +55,31 @@ if (!$erp_number) {
     ]));
 }
 
-// ✅ The rest of your leave-fetching code stays exactly the same
 try {
+
+    // 3️⃣ Fetch leaves with leave type name
     $leaves = DB::query(
         "SELECT 
-            id,
-            leave_type,
-            leave_nature,
-            start_date,
-            end_date,
-            reason,
-            manager_status,
-            manager_id,
-            hr_status,
-            hr_id,
-            segment_head_status,
-            segment_head_id,
-            attendance_status,
-            attendance_id,
-            status,
-            created_at
-         FROM apply_leaves
-         WHERE erp_number = %s
-         ORDER BY id DESC",
+            al.id,
+            lt.name AS leave_type,
+            al.leave_nature,
+            al.start_date,
+            al.end_date,
+            al.reason,
+            al.manager_status,
+            al.manager_id,
+            al.hr_status,
+            al.hr_id,
+            al.segment_head_status,
+            al.segment_head_id,
+            al.attendance_status,
+            al.attendance_id,
+            al.status,
+            al.created_at
+         FROM apply_leaves al
+         LEFT JOIN leave_types lt ON al.leave_type = lt.id
+         WHERE al.erp_number = %s
+         ORDER BY al.id DESC",
         $erp_number
     );
 
@@ -125,7 +127,7 @@ try {
 
         $leaveData = [
             "id" => $leave['id'],
-            "leave_type" => $leave['leave_type'],
+            "leave_type" => $leave['leave_type'], // now the NAME
             "leave_nature" => $leave['leave_nature'],
             "start_date" => $leave['start_date'],
             "end_date" => $leave['end_date'],

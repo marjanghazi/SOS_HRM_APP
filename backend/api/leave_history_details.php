@@ -60,9 +60,13 @@ try {
             end_date,
             reason,
             manager_status,
+            manager_id,
             hr_status,
+            hr_id,
             segment_head_status,
+            segment_head_id,
             attendance_status,
+            attendance_id,
             status,
             created_at
          FROM apply_leaves
@@ -96,13 +100,17 @@ try {
             "leave_days" => $days,
             "final_status" => $leave['status'], // direct from DB
             "manager_status" => $leave['manager_status'],
-            "attendance_status" => $leave['attendance_status']
+            "manager_id" => $leave['manager_id'],
+            "attendance_status" => $leave['attendance_status'],
+            "attendance_id" => $leave['attendance_id'],
         ];
 
         // 🔹 If days > 4 include HR & Segment Head
         if ($days > 4) {
             $leaveData["hr_status"] = $leave['hr_status'];
             $leaveData["segment_head_status"] = $leave['segment_head_status'];
+            $leaveData["hr_id"] = $leave['hr_id'];
+            $leaveData["segment_head_id"] = $leave['segment_head_id'];
         }
 
         $response[] = $leaveData;

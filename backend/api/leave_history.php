@@ -62,6 +62,7 @@ try {
         "SELECT 
             lt.name AS leave_type,
             al.leave_nature,
+            al.id,
             al.start_date,
             al.end_date,
             al.reason,

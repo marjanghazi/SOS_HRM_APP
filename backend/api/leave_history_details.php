@@ -53,7 +53,6 @@ try {
     $leaves = DB::query(
         "SELECT 
             id,
-            erp_number,
             leave_type,
             leave_nature,
             start_date,
@@ -75,11 +74,45 @@ try {
         $erp_number
     );
 
+    if (!$leaves) {
+        echo json_encode([
+            "success" => true,
+            "count" => 0,
+            "data" => []
+        ]);
+        exit;
+    }
+
+    // 4️⃣ Collect all ERP IDs needed
+    $allApproverIds = [];
+
+    foreach ($leaves as $leave) {
+        $allApproverIds[] = $leave['manager_id'];
+        $allApproverIds[] = $leave['attendance_id'];
+        $allApproverIds[] = $leave['hr_id'];
+        $allApproverIds[] = $leave['segment_head_id'];
+    }
+
+    $allApproverIds = array_unique(array_filter($allApproverIds));
+
+    // 5️⃣ Fetch users in one query
+    $users = [];
+
+    if (!empty($allApproverIds)) {
+        $placeholders = implode(',', array_fill(0, count($allApproverIds), '%s'));
+        $query = "SELECT erp_number, name FROM users WHERE erp_number IN ($placeholders)";
+        $usersData = DB::query($query, ...$allApproverIds);
+
+        foreach ($usersData as $user) {
+            $users[$user['erp_number']] = $user['name'];
+        }
+    }
+
+    // 6️⃣ Build response
     $response = [];
 
     foreach ($leaves as $leave) {
 
-        // 🔹 Calculate leave days
         $start = new DateTime($leave['start_date']);
         $end   = new DateTime($leave['end_date']);
         $interval = $start->diff($end);
@@ -89,7 +122,12 @@ try {
             $days = 0.5;
         }
 
-        // 🔹 Base response
+        // Helper function
+        $getName = function($erp) use ($users) {
+            if (!$erp) return null;
+            return $users[$erp] ?? "ERP number not matched";
+        };
+
         $leaveData = [
             "id" => $leave['id'],
             "leave_type" => $leave['leave_type'],
@@ -98,19 +136,33 @@ try {
             "end_date" => $leave['end_date'],
             "reason" => $leave['reason'],
             "leave_days" => $days,
-            "final_status" => $leave['status'], // direct from DB
-            "manager_status" => $leave['manager_status'],
-            "manager_id" => $leave['manager_id'],
-            "attendance_status" => $leave['attendance_status'],
-            "attendance_id" => $leave['attendance_id'],
+            "final_status" => $leave['status'],
+
+            "manager" => [
+                "erp_number" => $leave['manager_id'],
+                "name" => $getName($leave['manager_id']),
+                "status" => $leave['manager_status']
+            ],
+
+            "attendance" => [
+                "erp_number" => $leave['attendance_id'],
+                "name" => $getName($leave['attendance_id']),
+                "status" => $leave['attendance_status']
+            ]
         ];
 
-        // 🔹 If days > 4 include HR & Segment Head
         if ($days > 4) {
-            $leaveData["hr_status"] = $leave['hr_status'];
-            $leaveData["segment_head_status"] = $leave['segment_head_status'];
-            $leaveData["hr_id"] = $leave['hr_id'];
-            $leaveData["segment_head_id"] = $leave['segment_head_id'];
+            $leaveData["hr"] = [
+                "erp_number" => $leave['hr_id'],
+                "name" => $getName($leave['hr_id']),
+                "status" => $leave['hr_status']
+            ];
+
+            $leaveData["segment_head"] = [
+                "erp_number" => $leave['segment_head_id'],
+                "name" => $getName($leave['segment_head_id']),
+                "status" => $leave['segment_head_status']
+            ];
         }
 
         $response[] = $leaveData;
@@ -121,13 +173,12 @@ try {
         "count" => count($response),
         "data" => $response
     ]);
+
 } catch (Exception $e) {
 
     http_response_code(500);
     echo json_encode([
         "success" => false,
-        "error" => $e->getMessage(),
-        "file" => $e->getFile(),
-        "line" => $e->getLine()
+        "error" => $e->getMessage()
     ]);
 }

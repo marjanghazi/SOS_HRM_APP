@@ -6,7 +6,6 @@ use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
 header("Content-Type: application/json");
-
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -18,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
         "error" => "Only POST requests are allowed"
     ]));
 }
+
 // 1️⃣ Authorization Header
 $headers = getallheaders();
 $authHeader = $headers['Authorization'] ?? '';
@@ -57,18 +57,19 @@ if (!$erp_number) {
 
 try {
 
-    // 3️⃣ Fetch simplified leave data for ERP
+    // 3️⃣ Fetch leave data with leave type name via JOIN
     $leaves = DB::query(
         "SELECT 
-            leave_type,
-            leave_nature,
-            start_date,
-            end_date,
-            reason,
-            status
-         FROM apply_leaves
-         WHERE erp_number = %s
-         ORDER BY id DESC",
+            lt.name AS leave_type,
+            al.leave_nature,
+            al.start_date,
+            al.end_date,
+            al.reason,
+            al.status
+         FROM apply_leaves al
+         LEFT JOIN leave_types lt ON al.leave_type = lt.id
+         WHERE al.erp_number = %s
+         ORDER BY al.id DESC",
         $erp_number
     );
 
@@ -77,8 +78,8 @@ try {
         "count" => count($leaves),
         "data" => $leaves
     ]);
-} catch (Exception $e) {
 
+} catch (Exception $e) {
     http_response_code(500);
     echo json_encode([
         "success" => false,

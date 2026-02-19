@@ -6,9 +6,17 @@ use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
 header("Content-Type: application/json");
-
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
+
+// ✅ Only allow POST requests
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405); // Method Not Allowed
+    die(json_encode([
+        "success" => false,
+        "error" => "Only POST requests are allowed"
+    ]));
+}
 
 // 1️⃣ Authorization Header
 $headers = getallheaders();
@@ -47,9 +55,8 @@ if (!$erp_number) {
     ]));
 }
 
+// ✅ The rest of your leave-fetching code stays exactly the same
 try {
-
-    // 3️⃣ Fetch leaves
     $leaves = DB::query(
         "SELECT 
             id,
@@ -83,21 +90,16 @@ try {
         exit;
     }
 
-    // 4️⃣ Collect all ERP IDs needed
     $allApproverIds = [];
-
     foreach ($leaves as $leave) {
         $allApproverIds[] = $leave['manager_id'];
         $allApproverIds[] = $leave['attendance_id'];
         $allApproverIds[] = $leave['hr_id'];
         $allApproverIds[] = $leave['segment_head_id'];
     }
-
     $allApproverIds = array_unique(array_filter($allApproverIds));
 
-    // 5️⃣ Fetch users in one query
     $users = [];
-
     if (!empty($allApproverIds)) {
         $placeholders = implode(',', array_fill(0, count($allApproverIds), '%s'));
         $query = "SELECT erp_number, name FROM users WHERE erp_number IN ($placeholders)";
@@ -108,21 +110,14 @@ try {
         }
     }
 
-    // 6️⃣ Build response
     $response = [];
-
     foreach ($leaves as $leave) {
-
         $start = new DateTime($leave['start_date']);
         $end   = new DateTime($leave['end_date']);
         $interval = $start->diff($end);
         $days = $interval->days + 1;
+        if (strtolower($leave['leave_nature']) === "half day") $days = 0.5;
 
-        if (strtolower($leave['leave_nature']) === "half day") {
-            $days = 0.5;
-        }
-
-        // Helper function
         $getName = function ($erp) use ($users) {
             if (!$erp) return null;
             return $users[$erp] ?? "ERP number not matched";
@@ -137,13 +132,11 @@ try {
             "reason" => $leave['reason'],
             "leave_days" => $days,
             "final_status" => $leave['status'],
-
             "manager" => [
                 "erp_number" => $leave['manager_id'],
                 "name" => $getName($leave['manager_id']),
                 "status" => $leave['manager_status']
             ],
-
             "attendance" => [
                 "erp_number" => $leave['attendance_id'],
                 "name" => $getName($leave['attendance_id']),
@@ -157,7 +150,6 @@ try {
                 "name" => $getName($leave['hr_id']),
                 "status" => $leave['hr_status']
             ];
-
             $leaveData["segment_head"] = [
                 "erp_number" => $leave['segment_head_id'],
                 "name" => $getName($leave['segment_head_id']),
@@ -174,7 +166,6 @@ try {
         "data" => $response
     ]);
 } catch (Exception $e) {
-
     http_response_code(500);
     echo json_encode([
         "success" => false,

@@ -60,9 +60,9 @@ try {
     // 3️⃣ Fetch leave data with leave type name via JOIN
     $leaves = DB::query(
         "SELECT 
+            al.id,
             lt.name AS leave_type,
             al.leave_nature,
-            al.id,
             al.start_date,
             al.end_date,
             al.reason,
@@ -79,7 +79,6 @@ try {
         "count" => count($leaves),
         "data" => $leaves
     ]);
-
 } catch (Exception $e) {
     http_response_code(500);
     echo json_encode([

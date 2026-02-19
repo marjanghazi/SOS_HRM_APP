@@ -118,7 +118,12 @@ try {
         $end   = new DateTime($leave['end_date']);
         $interval = $start->diff($end);
         $days = $interval->days + 1;
-        if (strtolower($leave['leave_nature']) === "half day") $days = 0.5;
+
+        if (strtolower($leave['leave_nature']) === "half day") {
+            $daysString = "0.5";
+        } else {
+            $daysString = (string) $days;
+        }
 
         $getName = function ($erp) use ($users) {
             if (!$erp) return null;
@@ -132,7 +137,7 @@ try {
             "start_date" => $leave['start_date'],
             "end_date" => $leave['end_date'],
             "reason" => $leave['reason'],
-            "leave_days" => $days,
+            "leave_days" => $daysString,
             "final_status" => $leave['status'],
             "manager" => [
                 "erp_number" => $leave['manager_id'],

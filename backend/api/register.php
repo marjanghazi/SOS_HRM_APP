@@ -53,18 +53,20 @@ $gender = $data["gender"] ?? "other";
 $password = password_hash($data["password"], PASSWORD_BCRYPT);
 $profile_image = $data["profile_image"] ?? null;
 
-/* Default system values */
-$role_id = 1;
-$cfo_id = 408;
-$hr_id = 1115;
-$attendance_id = 138;
-$accountant_id = 125;
-$admin_id = 594;
+/* Get manager IDs from the data */
+$role_id = $data["role_id"] ?? 1;
+$cfo_id = $data["cfo_id"] ?? 408;
+$hr_id = $data["hr_id"] ?? 101322;        // Updated to 101322
+$attendance_id = $data["attendance_id"] ?? 101323;  // Updated to 101323
+$accountant_id = $data["accountant_id"] ?? 125;
+$admin_id = $data["admin_id"] ?? 594;
 $employment_status = 'A';
 $is_permanent = ($status === "Permanent") ? 1 : 0;
 $admin_approved = 1;
 
 try {
+    // Debug: Log the data being inserted
+    error_log("Inserting user with HR ID: " . $hr_id . ", Attendance ID: " . $attendance_id);
 
     /* Check duplicate */
     $existing = DB::queryFirstRow(
@@ -108,16 +110,27 @@ try {
         'gender' => $gender,
         'is_permanent' => $is_permanent,
         'employment_status' => $employment_status,
-        'admin_approved' => $admin_approved
+        'admin_approved' => $admin_approved,
+        'created_at' => date('Y-m-d H:i:s'),
+        'updated_at' => date('Y-m-d H:i:s')
     ]);
+
+    $inserted_id = DB::insertId();
 
     echo json_encode([
-        "message" => "User registered successfully"
+        "message" => "User registered successfully",
+        "id" => $inserted_id,
+        "erp_number" => $erp_number,
+        "name" => $name,
+        "hr_id" => $hr_id,
+        "attendance_id" => $attendance_id
     ]);
+    
 } catch (Exception $e) {
-
+    error_log("Registration error: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
-        "error" => "Registration failed"
+        "error" => "Registration failed: " . $e->getMessage()
     ]);
 }
+?>

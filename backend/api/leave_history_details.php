@@ -68,12 +68,16 @@ try {
             al.reason,
             al.manager_status,
             al.manager_id,
+            al.manager_approval_date,
             al.hr_status,
             al.hr_id,
+            al.hr_approval_date,
             al.segment_head_status,
             al.segment_head_id,
+            al.segment_head_approval_date,
             al.attendance_status,
             al.attendance_id,
+            al.attendance_approval_date,
             al.status,
             al.created_at
          FROM apply_leaves al
@@ -142,12 +146,14 @@ try {
             "manager" => [
                 "erp_number" => $leave['manager_id'],
                 "name" => $getName($leave['manager_id']),
-                "status" => $leave['manager_status']
+                "status" => $leave['manager_status'],
+                "manager_approval_date" => $leave['manager_approval_date']
             ],
             "attendance" => [
                 "erp_number" => $leave['attendance_id'],
                 "name" => $getName($leave['attendance_id']),
-                "status" => $leave['attendance_status']
+                "status" => $leave['attendance_status'],
+                "attendance_approval_date" => $leave['attendance_approval_date']
             ]
         ];
 
@@ -155,12 +161,14 @@ try {
             $leaveData["hr"] = [
                 "erp_number" => $leave['hr_id'],
                 "name" => $getName($leave['hr_id']),
-                "status" => $leave['hr_status']
+                "status" => $leave['hr_status'],
+                "hr_approval_date" => $leave['hr_approval_date']
             ];
             $leaveData["segment_head"] = [
                 "erp_number" => $leave['segment_head_id'],
                 "name" => $getName($leave['segment_head_id']),
-                "status" => $leave['segment_head_status']
+                "status" => $leave['segment_head_status'],
+                "segment_head_approval_date" => $leave['segment_head_approval_date']
             ];
         }
 

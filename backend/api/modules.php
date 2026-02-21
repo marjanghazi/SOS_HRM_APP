@@ -7,6 +7,9 @@ use Firebase\JWT\Key;
 
 header("Content-Type: application/json");
 
+// Base URL of your project (CHANGE THIS)
+$baseUrl = "https://unthrust-arillate-retha.ngrok-free.dev/project-root/backend/"; 
+
 // 1️⃣ Get Authorization header
 $headers = getallheaders();
 $authHeader = $headers['Authorization'] ?? '';
@@ -36,18 +39,25 @@ try {
 
 try {
 
-    // 3️⃣ Fetch active modules using MeekroDB
+    // 3️⃣ Fetch active modules
     $modules = DB::query(
         "SELECT * FROM modules WHERE status = %i",
         1
     );
 
-    // 4️⃣ Return JSON
+    // 4️⃣ Append full icon URL
+    foreach ($modules as &$module) {
+        if (!empty($module['icon'])) {
+            $module['icon'] = $baseUrl . $module['icon'];
+        }
+    }
+
     echo json_encode([
         "success" => true,
         "message" => "Modules fetched successfully",
         "data" => $modules
     ]);
+
 } catch (Exception $e) {
 
     http_response_code(500);
